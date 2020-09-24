@@ -1,242 +1,116 @@
 (function () {
-	/**
-	 * Obtains parameters from the hash of the URL
-	 * @return Object
-	 */
+  /**
+   * Obtains parameters from the hash of the URL
+   * @return Object
+   */
+  let displayName = 'Deezer Receipt';
+  let dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  let today = new Date();
+  let queryString = window.location.search;
+  let urlParams = new URLSearchParams(queryString)
+  let userProfileSource = document.getElementById('user-profile-template').innerHTML,
+      userProfileTemplate = Handlebars.compile(userProfileSource),
+      userProfilePlaceholder = document.getElementById('receipt');
 
-	var displayName = 'RECEIPTIFY';
-	var dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-	var today = new Date();
-	function getHashParams() {
-		var hashParams = {};
-		var e,
-			r = /([^&;=]+)=?([^&;]*)/g,
-			q = window.location.hash.substring(1);
-		while ((e = r.exec(q))) {
-			hashParams[e[1]] = decodeURIComponent(e[2]);
-		}
-		return hashParams;
-	}
+  let access_token = urlParams.get('access_token'),
+      error = urlParams.get('error');
 
-	var userProfileSource = document.getElementById('user-profile-template').innerHTML,
-		userProfileTemplate = Handlebars.compile(userProfileSource),
-		userProfilePlaceholder = document.getElementById('receipt');
+  if (error) {
+    alert('There was an error during the authentication');
+  } else {
+    if (access_token) {
+      $.ajax({
+        url: 'https://api.deezer.com/user/me',
+        dataType: 'jsonp',
+        data: {
+          access_token: access_token,
+          output: 'jsonp'
+        },
+        success: function (response) {
+          console.log(response)
+          displayName = response.name;
+          $('#login').hide();
+          $('#loggedin').show();
+        },
+        error: function (response, error, thrownError) {
+          console.log(response)
+          console.log(error)
+          console.log(thrownError)
+        }
+      });
+    } else {
+      // render initial screen
+      $('#login').show();
+      $('#loggedin').hide();
+    }
 
-	var params = getHashParams();
+    document.getElementById('top-tracks').addEventListener(
+        'click',
+        function () {
+          $.ajax({
+            url: 'https://api.deezer.com/user/me/charts/tracks',
+            dataType: 'jsonp',
+            data: {
+              access_token: access_token,
+              output: 'jsonp'
+            },
+            success: function (response) {
+              var data = {
+                trackList: [],
+                total: '',
+                date: today.toLocaleDateString('en-US', dateOptions).toUpperCase(),
+                json: true
+              }
 
-	var access_token = params.access_token,
-		refresh_token = params.refresh_token,
-		error = params.error;
+              let total = 0
+              response.data.forEach(function (val) {
+                total += val.duration
+                let minutes = Math.floor(val.duration / 60);
+                let seconds = (val.duration % 60).toFixed(0);
+                data.trackList.push({
+                  artist: val.artist.name.toUpperCase(),
+                  duration: minutes + ':' + (seconds < 10 ? '0' : '') + seconds,
+                  title: val.title.toUpperCase()
+                })
+              })
+              let totalMinutes = Math.floor(total / 60);
+              let totalSeconds = (total % 60).toFixed(0);
+              data.total = totalMinutes + ':' + (totalSeconds < 10 ? '0' : '') + totalSeconds;
+              userProfilePlaceholder.innerHTML = userProfileTemplate({
+                tracks: data.trackList,
+                total: data.total,
+                time: data.date,
+                num: 3,
+                name: displayName,
+                period: 'ALL TIME'
+              })
 
-	if (error) {
-		alert('There was an error during the authentication');
-	} else {
-		if (access_token) {
-			$.ajax({
-				url: 'https://api.spotify.com/v1/me',
-				headers: {
-					Authorization: 'Bearer ' + access_token
-				},
-				success: function (response) {
-					displayName = response.display_name.toUpperCase();
-					$('#login').hide();
-					$('#loggedin').show();
-				}
-			});
-		} else {
-			// render initial screen
-			$('#login').show();
-			$('#loggedin').hide();
-		}
+              document.getElementById('download').addEventListener('click', function () {
+                let offScreen = document.querySelector('.receiptContainer');
 
-		document.getElementById('short-term').addEventListener(
-			'click',
-			function () {
-				$.ajax({
-					url: 'https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=short_term',
-					headers: {
-						Authorization: 'Bearer ' + access_token
-					},
-					success: function (response) {
-						var data = {
-							trackList: response.items,
-							total: 0,
-							date: today.toLocaleDateString('en-US', dateOptions).toUpperCase(),
-							json: true
-						};
-						for (var i = 0; i < data.trackList.length; i++) {
-							data.trackList[i].name = data.trackList[i].name.toUpperCase();
-							data.total += data.trackList[i].duration_ms;
-							let minutes = Math.floor(data.trackList[i].duration_ms / 60000);
-							let seconds = ((data.trackList[i].duration_ms % 60000) / 1000).toFixed(0);
-							data.trackList[i].duration_ms = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-							for (var j = 0; j < data.trackList[i].artists.length; j++) {
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.trim();
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.toUpperCase();
-								if (j != data.trackList[i].artists.length - 1) {
-									data.trackList[i].artists[j].name = data.trackList[i].artists[j].name + ', ';
-								}
-							}
-						}
-						minutes = Math.floor(data.total / 60000);
-						seconds = ((data.total % 60000) / 1000).toFixed(0);
-						data.total = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-						userProfilePlaceholder.innerHTML = userProfileTemplate({
-							tracks: data.trackList,
-							total: data.total,
-							time: data.date,
-							num: 1,
-							name: displayName,
-							period: 'LAST MONTH'
-						});
-
-						document.getElementById('download').addEventListener('click', function () {
-							var offScreen = document.querySelector('.receiptContainer');
-
-							window.scrollTo(0, 0);
-							// Use clone with htm2canvas and delete clone
-							html2canvas(offScreen).then((canvas) => {
-								var dataURL = canvas.toDataURL();
-								console.log(dataURL);
-								var link = document.createElement('a');
-								link.download = 'short_term_receiptify.png';
-								link.href = dataURL;
-								document.body.appendChild(link);
-								link.click();
-								document.body.removeChild(link);
-								delete link;
-							});
-						});
-					}
-				});
-			},
-			false
-		);
-
-		document.getElementById('medium-term').addEventListener(
-			'click',
-			function () {
-				$.ajax({
-					url: 'https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=medium_term',
-					headers: {
-						Authorization: 'Bearer ' + access_token
-					},
-					success: function (response) {
-						var data = {
-							trackList: response.items,
-							total: 0,
-							date: today.toLocaleDateString('en-US', dateOptions).toUpperCase(),
-							json: true
-						};
-						for (var i = 0; i < data.trackList.length; i++) {
-							data.trackList[i].name = data.trackList[i].name.toUpperCase();
-							data.total += data.trackList[i].duration_ms;
-							let minutes = Math.floor(data.trackList[i].duration_ms / 60000);
-							let seconds = ((data.trackList[i].duration_ms % 60000) / 1000).toFixed(0);
-							data.trackList[i].duration_ms = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-							for (var j = 0; j < data.trackList[i].artists.length; j++) {
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.trim();
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.toUpperCase();
-								if (j != data.trackList[i].artists.length - 1) {
-									data.trackList[i].artists[j].name = data.trackList[i].artists[j].name + ', ';
-								}
-							}
-						}
-						minutes = Math.floor(data.total / 60000);
-						seconds = ((data.total % 60000) / 1000).toFixed(0);
-						data.total = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-						userProfilePlaceholder.innerHTML = userProfileTemplate({
-							tracks: data.trackList,
-							total: data.total,
-							time: data.date,
-							num: 2,
-							name: displayName,
-							period: 'LAST 6 MONTHS'
-						});
-						document.getElementById('download').addEventListener('click', function () {
-							var offScreen = document.querySelector('.receiptContainer');
-
-							window.scrollTo(0, 0);
-							// Use clone with htm2canvas and delete clone
-							html2canvas(offScreen).then((canvas) => {
-								var dataURL = canvas.toDataURL();
-								console.log(dataURL);
-								var link = document.createElement('a');
-								link.download = 'medium_term_receiptify.png';
-								link.href = dataURL;
-								document.body.appendChild(link);
-								link.click();
-								document.body.removeChild(link);
-								delete link;
-							});
-						});
-					}
-				});
-			},
-			false
-		);
-
-		document.getElementById('long-term').addEventListener(
-			'click',
-			function () {
-				$.ajax({
-					url: 'https://api.spotify.com/v1/me/top/tracks?limit=10&time_range=long_term',
-					headers: {
-						Authorization: 'Bearer ' + access_token
-					},
-					success: function (response) {
-						var data = {
-							trackList: response.items,
-							total: 0,
-							date: today.toLocaleDateString('en-US', dateOptions).toUpperCase(),
-							json: true
-						};
-						for (var i = 0; i < data.trackList.length; i++) {
-							data.trackList[i].name = data.trackList[i].name.toUpperCase();
-							data.total += data.trackList[i].duration_ms;
-							let minutes = Math.floor(data.trackList[i].duration_ms / 60000);
-							let seconds = ((data.trackList[i].duration_ms % 60000) / 1000).toFixed(0);
-							data.trackList[i].duration_ms = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-							for (var j = 0; j < data.trackList[i].artists.length; j++) {
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.trim();
-								data.trackList[i].artists[j].name = data.trackList[i].artists[j].name.toUpperCase();
-								if (j != data.trackList[i].artists.length - 1) {
-									data.trackList[i].artists[j].name = data.trackList[i].artists[j].name + ', ';
-								}
-							}
-						}
-						minutes = Math.floor(data.total / 60000);
-						seconds = ((data.total % 60000) / 1000).toFixed(0);
-						data.total = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
-						userProfilePlaceholder.innerHTML = userProfileTemplate({
-							tracks: data.trackList,
-							total: data.total,
-							time: data.date,
-							num: 3,
-							name: displayName,
-							period: 'ALL TIME'
-						});
-						document.getElementById('download').addEventListener('click', function () {
-							var offScreen = document.querySelector('.receiptContainer');
-
-							window.scrollTo(0, 0);
-							// Use clone with htm2canvas and delete clone
-							html2canvas(offScreen).then((canvas) => {
-								var dataURL = canvas.toDataURL();
-								console.log(dataURL);
-								var link = document.createElement('a');
-								link.download = 'long_term_receiptify.png';
-								link.href = dataURL;
-								document.body.appendChild(link);
-								link.click();
-								document.body.removeChild(link);
-								delete link;
-							});
-						});
-					}
-				});
-			},
-			false
-		);
-	}
+                window.scrollTo(0, 0);
+                // Use clone with htm2canvas and delete clone
+                html2canvas(offScreen).then((canvas) => {
+                  let dataURL = canvas.toDataURL();
+                  console.log(dataURL);
+                  let link = document.createElement('a');
+                  link.download = 'test_deezer.png';
+                  link.href = dataURL;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  delete link;
+                });
+              });
+            },
+            error: function (response, error, thrownError) {
+              console.log(response)
+              console.log(error)
+              console.log(thrownError)
+            }
+          })
+        },
+        false
+    )
+  }
 })();
