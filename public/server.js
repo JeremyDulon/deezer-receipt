@@ -63,15 +63,19 @@
               }
 
               let total = 0
-              response.data.forEach(function (val) {
+              let tracksData = response.data.slice(0,10)
+              let index = 1
+              tracksData.forEach(function (val) {
                 total += val.duration
                 let minutes = Math.floor(val.duration / 60);
                 let seconds = (val.duration % 60).toFixed(0);
                 data.trackList.push({
+                  num: index,
                   artist: val.artist.name.toUpperCase(),
                   duration: minutes + ':' + (seconds < 10 ? '0' : '') + seconds,
                   title: val.title.toUpperCase()
                 })
+                index++;
               })
               let totalMinutes = Math.floor(total / 60);
               let totalSeconds = (total % 60).toFixed(0);

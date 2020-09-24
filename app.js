@@ -37,9 +37,6 @@ app.get('/login', function (req, res) {
 });
 
 app.get('/callback', function (req, res) {
-  // fs.writeFile('req.txt', req.toString(), (err => {
-  // 	if (err) throw err;
-  // }))
   var code = req.query.code || null;
   var error = req.query.error_reason || null;
 
@@ -65,7 +62,7 @@ app.get('/callback', function (req, res) {
         let access_token = jsonBody.access_token
 
         if (access_token) {
-          res.redirect('/#?access_token=' + access_token)
+          res.redirect('/?access_token=' + access_token)
         } else {
           res.redirect('/#' +
             querystring.stringify({
