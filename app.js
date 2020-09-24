@@ -11,12 +11,13 @@ const request = require('request'); // "Request" library
 const cors = require('cors');
 const querystring = require('querystring');
 const cookieParser = require('cookie-parser');
-const { config } = require('./config');
-const fs = require('fs');
-
-var appId = config.appId; // Your appId
-var appSecret = config.appSecret; // Your app secret
-var redirect_uri = config.redirectUri; // Your redirect uri
+require("dotenv").config({
+  path: __dirname + "/.env",
+});
+var appId = process.env.appId; // Your client id
+var appSecret = process.env.appSecret; // Your secret
+let redirectUri =
+    process.env.redirectUri || "http://localhost:3000/callback/"; // Your redirect uri
 
 var app = express();
 
@@ -31,7 +32,7 @@ app.get('/login', function (req, res) {
       querystring.stringify({
         app_id: 436702,
         perms: 'basic_access,offline_access'
-      }) + '&redirect_uri=' + redirect_uri
+      }) + '&redirect_uri=' + redirectUri
   );
 });
 
