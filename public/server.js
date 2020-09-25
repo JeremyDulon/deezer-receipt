@@ -86,7 +86,7 @@
                 time: data.date,
                 num: 3,
                 name: displayName,
-                period: 'ALL TIME'
+                period: 'FAVORITE TRACKS'
               })
 
               document.getElementById('download').addEventListener('click', function () {
