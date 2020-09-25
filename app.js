@@ -31,7 +31,7 @@ app.get('/login', function (req, res) {
       'https://connect.deezer.com/oauth/auth.php?' +
       querystring.stringify({
         app_id: 436702,
-        perms: 'basic_access,offline_access'
+        perms: 'basic_access'
       }) + '&redirect_uri=' + redirectUri
   );
 });
