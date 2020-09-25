@@ -98,7 +98,7 @@
                   let dataURL = canvas.toDataURL();
                   console.log(dataURL);
                   let link = document.createElement('a');
-                  link.download = 'test_deezer.png';
+                  link.download = 'deezer_tracks.png';
                   link.href = dataURL;
                   document.body.appendChild(link);
                   link.click();
