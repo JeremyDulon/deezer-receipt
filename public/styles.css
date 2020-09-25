@@ -173,4 +173,7 @@ td {
     .container {
         width: 100%;
     }
+    #receipt img {
+        width: 100%;
+    }
 }

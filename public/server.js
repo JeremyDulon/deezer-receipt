@@ -15,6 +15,21 @@
   let access_token = urlParams.get('access_token'),
       error = urlParams.get('error');
 
+  function hiddenClone(element) {
+    // Create clone of element
+    let clone = element.cloneNode(true);
+
+    // Position element relatively within the
+    // body but still out of the viewport
+    let style = clone.style;
+    style.position = 'relative';
+    style.top = window.innerHeight + 'px';
+    style.left = 0;
+    // Append clone to body and return the clone
+    document.body.appendChild(clone);
+    return clone;
+  }
+
   if (error) {
     alert('There was an error during the authentication');
   } else {
@@ -28,7 +43,7 @@
         },
         success: function (response) {
           console.log(response)
-          displayName = response.name;
+          displayName = response.name.toUpperCase();
           $('#login').hide();
           $('#loggedin').show();
         },
@@ -70,7 +85,7 @@
                 let minutes = Math.floor(val.duration / 60);
                 let seconds = (val.duration % 60).toFixed(0);
                 data.trackList.push({
-                  num: index,
+                  num: index < 10 ? '0' + index : index,
                   artist: val.artist.name.toUpperCase(),
                   duration: minutes + ':' + (seconds < 10 ? '0' : '') + seconds,
                   title: val.title.toUpperCase()
@@ -91,10 +106,10 @@
 
               document.getElementById('download').addEventListener('click', function () {
                 let offScreen = document.querySelector('.receiptContainer');
-
                 window.scrollTo(0, 0);
+                var clone = hiddenClone(offScreen);
                 // Use clone with htm2canvas and delete clone
-                html2canvas(offScreen).then((canvas) => {
+                html2canvas(clone, { scrollY: -window.scrollY}).then((canvas) => {
                   let dataURL = canvas.toDataURL();
                   console.log(dataURL);
                   let link = document.createElement('a');
@@ -103,7 +118,6 @@
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);
-                  delete link;
                 });
               });
             },
